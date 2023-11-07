@@ -196,7 +196,8 @@ def get_fitness_number_correct(sequence, expression):
     
 def roulette_wheel_selection(population, fitness, number_iterations):
     """
-    
+    performs a roulette wheel selection by examining the fitness of each indevidual in the population,
+    and assigning each one an adiquit portion of the wheel. Then performs number_iterations selections. 
 
     Parameters
     ----------
@@ -229,7 +230,26 @@ def roulette_wheel_selection(population, fitness, number_iterations):
     return selection
 
 def tournament_selection(population, fitness, size, number_iterations):
-    """performs tournament selection, choosing the fittest individual each iteration"""
+    """
+    performs tournament selection on a randomly allocated section of the population,
+    choosing the fittest individual each iteration.
+      
+    Parameters
+    ----------
+    population: List
+        list of individuals in the population
+    fitness : list
+        fitnesses of each individual in the population
+    size: int
+        number of individuals in each tornament
+    number_iterations: int
+        the number of times the selection is to be run
+    
+    Returns
+    -------
+    List of selected individuals
+    
+      """
     result = []
     for round in range(number_iterations):  
         selection = []
@@ -246,6 +266,7 @@ def tournament_selection(population, fitness, size, number_iterations):
 
 def reproduce(parent_a, parent_b, max_depth):
     """
+    Takes two individuals in the population and randomly swaps subtrees
 
     Parameters
     ----------
@@ -253,7 +274,9 @@ def reproduce(parent_a, parent_b, max_depth):
         a pre-order expression in list form
     exp_b : List
         a pre-order expression in list form
-
+    max_depth: int
+        the max depth of subtrees to swap
+        
     Returns
     -------
     two pre-order expressions in list form
@@ -289,7 +312,21 @@ def reproduce(parent_a, parent_b, max_depth):
         
         
 def tree_replace(expression, path, subtree):
-    """replaces the subtree on the given path with the given subtree"""
+    """replaces the subtree on the given path with the given subtree
+    
+    Parameters
+    ----------
+    expression: List
+        An expression in preorder form
+    path: list
+        The path the subtree to replace lies on
+    subtree: List
+        An expression to be swapped out
+
+    Returns
+    -------
+    None
+    """
     if len(path) > 0:
         current_exp=expression
         for depth in range(len(path)-1):
@@ -300,7 +337,19 @@ def tree_replace(expression, path, subtree):
     
     
 def get_random_subtree(expression, decision=[]):
-    """returns a random subtree of an expression, along with its location"""
+    """returns a random subtree of an expression, along with its location
+    
+    Parameters
+    ----------
+    expression: List
+        a preorder expression in list form
+    decision: List
+        the current path that has been traversed
+        
+    Returns
+    -------
+    The path that has been traversed
+    """
     movement = random.randint(0, 2)
     if type(expression[movement]) == list:
         return get_random_subtree(expression[movement], decision + [movement])
@@ -348,9 +397,9 @@ def predict_rest(sequence):
     
     
     number_iterations = 0
-    MAX_ITERATIONS = 200
+    MAX_ITERATIONS = 500
     fittest_sequence = population[0]
-    while get_fitness(sequence, fittest_sequence) > 0:
+    while get_fitness(sequence, fittest_sequence) > 0 and number_iterations < MAX_ITERATIONS:
         number_iterations += 1
         
         # First evaluate the fitness of the cycle
@@ -359,14 +408,13 @@ def predict_rest(sequence):
         fittest_sequence_index = max(list(range(len(population))), key=lambda i: fitness[i])
         fittest_sequence = population[fittest_sequence_index]
         
-        
         # Then choose a percentage to survive
         percent_direct_survivors = 0.7
         survivors = tournament_selection(population, fitness,\
-                    4, int(POPULATION_SIZE// (1/percent_direct_survivors)))
+                    4, int(POPULATION_SIZE // (1/percent_direct_survivors)))
         
         # breed survivors until numbers are back at peak
-        bred_survivors = survivors.copy()
+        bred_survivors = deepcopy(survivors)
         bred_survivors.append(fittest_sequence)
         while len(bred_survivors) < POPULATION_SIZE:
             index_1 = random.randint(0, len(survivors)-1)
@@ -384,50 +432,68 @@ def predict_rest(sequence):
     return generate_rest(sequence, fittest_sequence, 5), format_expression(fittest_sequence)
 
 def format_expression(expression):
-    """takes in an expression, and then puts it in a nice form"""
+    """takes in an expression, and then puts it in a nice form for output
+    
+    Parameters
+    ----------
+    expression: List
+        a preorder representation of an expression in list form
+    
+    Returns
+    -------
+    the expression in string form"""
     if type(expression) == list:
         return f"({format_expression(expression[1])} {expression[0]}  {format_expression(expression[2])})"
     else:
         return str(expression)
         
 
-def get_correct_percentage(sequence, expected_result):
+def get_correct_percentage(sequence, expected_result, num_iterations=100):
+    """ runs predict rest a set number of iterations, and prints the percentage that
+    give the correct results
+
+    Parameters
+    ----------
+    sequence: List
+        an integer sequence
+    expected_result: List
+        The next 5 outputs of the sequence
+    num_iterations: int
+        number of times the simulation is to be run
+    
+    Returns
+    -------
+    None
+    """
     score = 0
-    for i in range(100):
+    for i in range(num_iterations):
         print(i)
         if predict_rest(sequence) == expected_result:
             score += 1
-    print(f"{score} percent correct")
+    print(f"{score/num_iterations} percent correct")
     
 def test_cases():
+    """
+    A selection of test cases to be run
+    """
     
-    sequence = [0, 1, 2, 3, 4, 5, 6, 7]
-    the_rest = predict_rest(sequence)
-    print(sequence)
-    print(the_rest)
+    sequences = [[0, 1, 2, 3, 4, 5, 6, 7],
+                [0, 2, 4, 6, 8, 10, 12, 14],
+                [31, 29, 27, 25, 23, 21],
+                [0, 1, 4, 9, 16, 25, 36, 49],
+                [3, 2, 3, 6, 11, 18, 27, 38],
+                [0, 1, 1, 2, 3, 5, 8, 13],
+                [0, -1, 1, 0, 1, -1, 2, -1],
+                [1, 3, -5, 13, -31, 75, -181, 437]
+                 ]
+    for sequence in sequences:
+        print(f"Sequence: {sequence}, predicted output: {predict_rest(sequence)[0]}")    
+def main():
+    """
+    main function. Called when run
+    """
 
-    sequence = [0, 2, 4, 6, 8, 10, 12, 14]
-    print(predict_rest(sequence))
-    
-    sequence = [31, 29, 27, 25, 23, 21]
-    print(predict_rest(sequence))
-    
-    sequence = [0, 1, 4, 9, 16, 25, 36, 49]
-    print(predict_rest(sequence))
-    
-    sequence = [3, 2, 3, 6, 11, 18, 27, 38]
-    print(predict_rest(sequence))
-    
-    sequence =  [0, 1, 1, 2, 3, 5, 8, 13]
-    print(predict_rest(sequence))
-
-    sequence = [0, -1, 1, 0, 1, -1, 2, -1]
-    print(predict_rest(sequence))
-    
-    sequence = [1, 3, -5, 13, -31, 75, -181, 437]
-    print(predict_rest(sequence))
+    test_cases()
         
-        
-    
-    
-    
+if __name__ == "__main__":
+    main()
